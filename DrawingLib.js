@@ -12,6 +12,7 @@ function Init() {
     canvas.height = window.innerHeight;
 
     context = canvas.getContext("2d");
+
 }
 
 
@@ -104,6 +105,22 @@ class vec2 {
         let l = Math.sqrt(Math.pow(this.x, 2) + Math.pow(this.y, 2));
         return new vec2(this.x / l, this.y / l);
     }
+
+    magnitude() {
+        return Math.sqrt(this.x ** 2 + this.y ** 2);
+    }
+
+    sub(vec) {
+        return new vec2(this.x - vec.x, this.y - vec.y);
+    }
+
+    add(vec) {
+        return new vec2(this.x + vec.x, this.y + vec.y);
+    }
+
+    scale(k) {
+        return new vec2(this.x * k, this.y * k);
+    }
 }
 
 
@@ -184,7 +201,7 @@ function DrawLine(start, end, color) {
     context.closePath();
 }
 
-function DrawDot(pos, size) {
+function DrawDot(pos, size, color) {
     SetColor(color);
 
     pos = ToWindowSpace(pos);
@@ -233,6 +250,55 @@ function DrawCurve(vertices, color) {
     }
 }
 
+function DrawBezierCurve(points, curveSubdivision, color) {
+    let helpers = [];
+    let point = points[0];
+
+    for (let i = 0; i < points.length - 1; i++) {
+        helpers.push(points.slice(0, i ? -i : undefined));
+    }
+
+    console.log(helpers);
+
+    // for (let i = 0; i < points.length - 2; i++) {
+    //     helpers.push([]);
+    //     let group = helpers[helpers.length - 1];
+    //     for (let h = 0; h < points.length - i - 1; h++) {
+    //         group.push(new vec2)
+    //     }
+    // }
+
+    for (let v = 0; v < curveSubdivision; v++) {
+
+        for (let h = 1; h < helpers.length; h++) {
+            for (let hp = 0; hp < helpers[h].length; hp++) {
+                helpers[h][hp] = helpers[h - 1][hp];
+
+                let dif = helpers[h - 1][hp + 1].sub(helpers[h - 1][hp]);
+                let dPos = dif.scale(v / curveSubdivision);
+                helpers[h][hp] = helpers[h][hp].add(dPos);
+
+                //DrawLine(...helpers[helpers.length - 1], "#ffffff");
+                //DrawDot(helpers[helpers.length - 1][0], 2);
+                console.log(...helpers[helpers.length - 1]);
+
+                //h === helpers.length - 1 && console.log(dif);
+            }
+        }
+
+        let dif = helpers[helpers.length - 1][1].sub(helpers[helpers.length - 1][0]);
+        let hPos = helpers[helpers.length - 1][0];
+        let sPos = hPos.add(dif.scale((v - 4) / curveSubdivision)); // WHY -4 ???
+        let nPos = hPos.add(dif.scale(v / curveSubdivision));
+        //console.log(helpers[helpers.length - 1]);
+
+        DrawLine(sPos, nPos, color);
+    }
+
+    //DrawLine(...helpers[helpers.length - 1], "#ffffff");
+    //DrawDot(point, 10);
+}
+
 function DrawTexts(texts) {
     for (let text of texts) {
         DrawText(...text);
@@ -240,10 +306,14 @@ function DrawTexts(texts) {
 }
 /* --- */
 
-function RunLoop(callback) {
+function RunLoop(OnUpdate, OnStop) {
 
-    if (callback()) {
-        requestAnimationFrame(RunLoop.bind(null, callback));
+    if (OnUpdate()) {
+        requestAnimationFrame(RunLoop.bind(null, OnUpdate, undefined));
+    }
+    else {
+        if (OnStop)
+            OnStop();
     }
 }
 
@@ -253,6 +323,6 @@ export {
     Init, RunLoop,
     Clear,
     SetColor,
-    DrawLine, DrawTriangle, DrawDot, DrawText,    
-    DrawLines, DrawCurve, DrawTriangles, DrawTexts
+    DrawLine, DrawTriangle, DrawDot, DrawText,
+    DrawLines, DrawCurve, DrawBezierCurve, DrawTriangles, DrawTexts
 }
